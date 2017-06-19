@@ -2,7 +2,6 @@ package models
 
 import (
 	"database/sql"
-	"errors"
 	"strings"
 	"time"
 )
@@ -34,7 +33,7 @@ func FindProjectByNameOrAlias(name string) (*Project, error) {
 			return nil, err
 		}
 	} else {
-		return nil, errors.New("The project was not found")
+		return nil, NotFoundError{}
 	}
 
 	return &project, nil
