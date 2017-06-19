@@ -2,7 +2,6 @@ package models
 
 import (
 	"database/sql"
-	"fmt"
 )
 
 var DB *sql.DB
