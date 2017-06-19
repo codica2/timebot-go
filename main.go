@@ -72,8 +72,10 @@ func startBot(api *slack.Client, timebotId string) {
 	}
 }
 
+// "user=postgres password=postgres database=timebot_development sslmode=disable"
+
 func connectToDatabase() (*sql.DB, error) {
-	db, dbError := sql.Open("postgres", "user=postgres password=postgres database=timebot_development sslmode=disable")
+	db, dbError := sql.Open("postgres", os.Getenv("TIMEBOT_GO_DB_CONNECTION_STRING"))
 
 	if dbError != nil {
 		return nil, dbError

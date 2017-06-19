@@ -17,8 +17,8 @@ type User struct {
 
 func FindUser(uid string) (*User, error) {
 	selectPart := "id, name, uid, created_at, updated_at, is_speaking, is_active"
-	sqlQuery := fmt.Sprintf("SELECT %s FROM users WHERE uid = '%s'", selectPart, uid)
-	rows, err := DB.Query(sqlQuery)
+	sqlQuery := fmt.Sprintf("SELECT %s FROM users WHERE uid = $1", selectPart)
+	rows, err := DB.Query(sqlQuery, uid)
 
 	if err != nil {
 		return nil, err

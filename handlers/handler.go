@@ -6,6 +6,7 @@ import (
 	"github.com/alex-bogomolov/timebot_go/sender"
 	"github.com/nlopes/slack"
 	"regexp"
+	"time"
 )
 
 const newEntryStringRegexp = "^ *(.*) (\\d?\\d:[0-5]\\d) ([^\\s](?:.|\\s)*[^\\s])$"
@@ -24,15 +25,57 @@ func handleNewEntry(message *slack.Msg) {
 	matches := newEntryRegexp.FindStringSubmatch(message.Text)
 
 	projectName := matches[1]
-	time := matches[2]
-	description := matches[3]
+	entryTime := matches[2]
+	minutes := parseTime(entryTime)
+	details := matches[3]
 	user, err := models.FindUser(message.User)
 
 	if err != nil {
 		sender.SendMessage(user.UID, "Sorry. An error occurred.")
-	} else {
-		sender.SendMessage(user.UID, "The time entry will be created soon.")
+		return
 	}
 
-	fmt.Printf("Project: %s; time: %s; description: %s\n", projectName, time, description)
+	project, err := models.FindProjectByNameOrAlias(projectName)
+
+	if err != nil && err.Error() == "The project was not found" {
+		fmt.Println(err)
+		sender.SendMessage(user.UID, "The project with name \""+projectName+"\" was not found.")
+		return
+	} else if err != nil {
+		fmt.Println(err)
+		sender.SendMessage(user.UID, "Sorry. An error occurred.")
+		return
+	}
+
+	timeEntry := models.TimeEntry{
+		UserId:    user.ID,
+		Date:      time.Now(),
+		ProjectId: project.ID,
+		Details:   details,
+		Minutes:   minutes,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Time:      entryTime,
+	}
+
+	err = timeEntry.Create()
+
+	if err != nil {
+		fmt.Println(err)
+		sender.SendMessage(user.UID, "Sorry. An error occurred.")
+		return
+	}
+
+	sender.SendMessage(user.UID, "The time entry was successfully created.")
+}
+
+func parseTime(time string) int {
+	regex := regexp.MustCompile("^(\\d?\\d):(\\d\\d)$")
+
+	matchData := regex.FindStringSubmatch(time)
+
+	hours := int(matchData[1])
+	minutes := int(matchData[2])
+
+	return hours*60 + minutes
 }
