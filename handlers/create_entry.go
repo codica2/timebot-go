@@ -44,7 +44,7 @@ func handleNewEntry(message *slack.Msg) {
 
 	timeEntry := models.TimeEntry{
 		UserId:    user.ID,
-		Date:      time.Now(),
+		Date:      models.NewDate(time.Now()),
 		ProjectId: project.ID,
 		Details:   sql.NullString{details, true},
 		Minutes:   minutes,

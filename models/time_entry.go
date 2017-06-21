@@ -9,7 +9,7 @@ import (
 type TimeEntry struct {
 	ID        int
 	UserId    int
-	Date      time.Time
+	Date      Date
 	Time      string
 	Minutes   int
 	Details   sql.NullString
@@ -25,7 +25,7 @@ func (t *TimeEntry) Create() error {
 		return err
 	}
 
-	_, err = transaction.Exec("INSERT INTO time_entries (user_id, date, time, minutes, details, project_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)", t.UserId, t.Date, t.Time, t.Minutes, t.Details, t.ProjectId, t.CreatedAt, t.UpdatedAt)
+	_, err = transaction.Exec("INSERT INTO time_entries (user_id, date, time, minutes, details, project_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)", t.UserId, t.Date._time, t.Time, t.Minutes, t.Details, t.ProjectId, t.CreatedAt, t.UpdatedAt)
 
 	if err != nil {
 		return err
@@ -40,17 +40,17 @@ func (t *TimeEntry) Create() error {
 	return nil
 }
 
-func GetTimeEntriesInPeriodWithProjectAndUser(user *User, project *Project, from time.Time, to time.Time) ([]*TimeEntry, error) {
+func GetTimeEntriesInPeriodWithProjectAndUser(user *User, project *Project, from Date, to Date) ([]*TimeEntry, error) {
 	selectPart := "id, user_id, date, time, minutes, details, created_at, updated_at, project_id"
-	sqlQuery := fmt.Sprintf("SELECT %s FROM time_entries WHERE user_id = $1 AND date >= $2 and date <= $3", selectPart)
+	sqlQuery := fmt.Sprintf("SELECT %s FROM time_entries WHERE user_id = $1 AND date >= %s and date <= %s", selectPart, from.SQL(), to.SQL())
 
 	var rows *sql.Rows
 	var err error
 
 	if project == nil {
-		rows, err = DB.Query(sqlQuery, user.ID, formatDate(from), formatDate(to))
+		rows, err = DB.Query(sqlQuery, user.ID)
 	} else {
-		rows, err = DB.Query(sqlQuery + " AND project_id = $4", user.ID, formatDate(from), formatDate(to), project.ID)
+		rows, err = DB.Query(sqlQuery + " AND project_id = $2", user.ID, project.ID)
 	}
 
 	if err != nil {
@@ -61,11 +61,16 @@ func GetTimeEntriesInPeriodWithProjectAndUser(user *User, project *Project, from
 
 	for rows.Next() {
 		timeEntry := TimeEntry{}
-		err = rows.Scan(&timeEntry.ID, &timeEntry.UserId, &timeEntry.Date, &timeEntry.Time, &timeEntry.Minutes, &timeEntry.Details, &timeEntry.CreatedAt, &timeEntry.UpdatedAt, &timeEntry.ProjectId)
+
+		var d time.Time
+
+		err = rows.Scan(&timeEntry.ID, &timeEntry.UserId, &d, &timeEntry.Time, &timeEntry.Minutes, &timeEntry.Details, &timeEntry.CreatedAt, &timeEntry.UpdatedAt, &timeEntry.ProjectId)
 
 		if err != nil {
 			return nil, err
 		}
+
+		timeEntry.Date = NewDate(d)
 
 		timeEntries = append(timeEntries, &timeEntry)
 	}
@@ -73,6 +78,6 @@ func GetTimeEntriesInPeriodWithProjectAndUser(user *User, project *Project, from
 	return timeEntries, nil
 }
 
-func formatDate(datetime time.Time) string {
-	return datetime.Format("2006-01-02")
+func (t TimeEntry) String() string {
+	return fmt.Sprintf("User ID: %d; Time: %s; Details: \"%s\"", t.ID, t.Time, t.Details.String)
 }
