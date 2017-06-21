@@ -65,7 +65,7 @@ func handleReport(message *slack.Msg) {
 }
 
 func displayTimeEntries(timeEntries []*models.TimeEntry, from models.Date, to models.Date) {
-	days := make(map[models.Date][]*models.TimeEntry)
+	days := make(map[string][]*models.TimeEntry)
 
 	for d := from; to.CompareTo(&d) >= 0; d = d.Plus(1) {
 		entries := []*models.TimeEntry{}
@@ -76,7 +76,7 @@ func displayTimeEntries(timeEntries []*models.TimeEntry, from models.Date, to mo
 			}
 		}
 
-		days[d] = entries
+		days[d.String()] = entries
 	}
 
 	fmt.Println(days)
