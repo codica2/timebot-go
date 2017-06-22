@@ -51,7 +51,11 @@ func handleReport(message *slack.Msg) {
 		from = models.Today().StartOfWeek().Minus(7)
 		to = models.Today().EndOfWeek().Minus(7)
 	case "month":
+		from = models.BeginningOfMonth()
+		to = models.EndOfMonth()
 	case "last month":
+		from = models.BeginningOfLastMonth()
+		to = models.EndOfLastMonth()
 	}
 
 	timeEntries, err = models.GetTimeEntriesInPeriodWithProjectAndUser(user, project, from, to)
@@ -61,23 +65,41 @@ func handleReport(message *slack.Msg) {
 		return
 	}
 
-	displayTimeEntries(timeEntries, from, to)
+	displayTimeEntries(timeEntries, from, to, user)
 }
 
-func displayTimeEntries(timeEntries []*models.TimeEntry, from models.Date, to models.Date) {
-	days := make(map[string][]*models.TimeEntry)
+func displayTimeEntries(timeEntries []*models.TimeEntry, from models.Date, to models.Date, user *models.User) {
+	stringArray := models.NewStringArray()
 
-	for d := from; to.CompareTo(&d) >= 0; d = d.Plus(1) {
-		entries := []*models.TimeEntry{}
+	today := models.Today()
 
-		for _, entry := range timeEntries {
-			if entry.Date.Equal(&d) {
-				entries = append(entries, entry)
+	for d := from; to.CompareTo(&d) >= 0 && d.CompareTo(&today) <= 0; d = d.Plus(1) {
+		entries := findEntries(timeEntries, &d)
+
+		line := fmt.Sprintf("`%s:", d.Format("02.01.06` (Mon)"))
+
+		if len(entries) == 0 {
+			line += " No entries"
+			stringArray.Add(line)
+		} else {
+			stringArray.Add(line)
+			for _, entry := range entries {
+				stringArray.Add(entry.Description())
 			}
 		}
-
-		days[d.String()] = entries
 	}
 
-	fmt.Println(days)
+	sender.SendMessage(user.UID, stringArray.Join("\n"))
+}
+
+func findEntries(entries []*models.TimeEntry, d *models.Date) []*models.TimeEntry {
+	out := []*models.TimeEntry{}
+
+	for _, entry := range entries {
+		if entry.Date.Equal(d) {
+			out = append(out, entry)
+		}
+	}
+
+	return out
 }

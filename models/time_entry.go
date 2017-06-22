@@ -1,9 +1,9 @@
 package models
 
 import (
-	"time"
-	"fmt"
 	"database/sql"
+	"fmt"
+	"time"
 )
 
 type TimeEntry struct {
@@ -16,6 +16,7 @@ type TimeEntry struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	ProjectId int
+	Project   *Project
 }
 
 func (t *TimeEntry) Create() error {
@@ -40,9 +41,17 @@ func (t *TimeEntry) Create() error {
 	return nil
 }
 
+func (t *TimeEntry) Description() string {
+	// "*#{id}: #{project.name}* - #{time} - #{details}"
+
+	return fmt.Sprintf("*%d: %s* - %s - %s", t.ID, t.Project.Name, t.Time, t.Details.String)
+}
+
 func GetTimeEntriesInPeriodWithProjectAndUser(user *User, project *Project, from Date, to Date) ([]*TimeEntry, error) {
-	selectPart := "id, user_id, date, time, minutes, details, created_at, updated_at, project_id"
-	sqlQuery := fmt.Sprintf("SELECT %s FROM time_entries WHERE user_id = $1 AND date >= %s and date <= %s", selectPart, from.SQL(), to.SQL())
+	selectPart := "time_entries.id, time_entries.user_id, time_entries.date, time_entries.time, time_entries.minutes, time_entries.details, time_entries.created_at, time_entries.updated_at, time_entries.project_id"
+	projectSelectPart := "projects.id, projects.name, projects.alias, projects.created_at, projects.updated_at"
+	joins := "INNER JOIN projects ON projects.id = time_entries.project_id"
+	sqlQuery := fmt.Sprintf("SELECT %s, %s FROM time_entries %s WHERE user_id = $1 AND date >= %s and date <= %s", selectPart, projectSelectPart, joins, from.SQL(), to.SQL())
 
 	var rows *sql.Rows
 	var err error
@@ -50,7 +59,7 @@ func GetTimeEntriesInPeriodWithProjectAndUser(user *User, project *Project, from
 	if project == nil {
 		rows, err = DB.Query(sqlQuery, user.ID)
 	} else {
-		rows, err = DB.Query(sqlQuery + " AND project_id = $2", user.ID, project.ID)
+		rows, err = DB.Query(sqlQuery+" AND project_id = $2", user.ID, project.ID)
 	}
 
 	if err != nil {
@@ -61,10 +70,14 @@ func GetTimeEntriesInPeriodWithProjectAndUser(user *User, project *Project, from
 
 	for rows.Next() {
 		timeEntry := TimeEntry{}
+		timeEntry.Project = &Project{}
 
 		var d time.Time
 
-		err = rows.Scan(&timeEntry.ID, &timeEntry.UserId, &d, &timeEntry.Time, &timeEntry.Minutes, &timeEntry.Details, &timeEntry.CreatedAt, &timeEntry.UpdatedAt, &timeEntry.ProjectId)
+		err = rows.Scan(&timeEntry.ID, &timeEntry.UserId, &d, &timeEntry.Time, &timeEntry.Minutes,
+			&timeEntry.Details, &timeEntry.CreatedAt, &timeEntry.UpdatedAt, &timeEntry.ProjectId,
+			&timeEntry.Project.ID, &timeEntry.Project.Name, &timeEntry.Project.Alias, &timeEntry.Project.CreatedAt,
+			&timeEntry.Project.UpdatedAt)
 
 		if err != nil {
 			return nil, err
