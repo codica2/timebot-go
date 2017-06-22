@@ -89,6 +89,8 @@ func displayTimeEntries(timeEntries []*models.TimeEntry, from models.Date, to mo
 		}
 	}
 
+	stringArray.Add(fmt.Sprintf("*Total*: %s.", totalTime(timeEntries)))
+
 	sender.SendMessage(user.UID, stringArray.Join("\n"))
 }
 
@@ -102,4 +104,17 @@ func findEntries(entries []*models.TimeEntry, d *models.Date) []*models.TimeEntr
 	}
 
 	return out
+}
+
+func totalTime(entries []*models.TimeEntry) string {
+	total := 0
+
+	for _, entry := range entries {
+		total += entry.Minutes
+	}
+
+	minutes := total % 60
+	hours := total / 60
+
+	return fmt.Sprintf("%d:%02d", hours, minutes)
 }
