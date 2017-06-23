@@ -14,6 +14,8 @@ func HandleMessage(message *slack.Msg) {
 		handleNewEntry(message)
 	} else if matched, err = regexp.MatchString(reportRegexpString, message.Text); matched && err == nil {
 		handleReport(message)
+	} else if matched, err = regexp.MatchString(showProjectsRegexp, message.Text); matched && err == nil {
+		handleShowProjects(message.User)
 	} else {
 		sender.SendMessage(message.User, "Sorry. I don't understand you.")
 	}

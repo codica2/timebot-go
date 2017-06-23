@@ -38,3 +38,29 @@ func FindProjectByNameOrAlias(name string) (*Project, error) {
 
 	return &project, nil
 }
+
+func GetAllProjects() ([]*Project, error) {
+	selectPart := "id, name, alias, created_at, updated_at"
+
+	rows, err := DB.Query("SELECT "+selectPart+" FROM projects ORDER BY name")
+
+	if err != nil {
+		return nil, err
+	}
+
+	out := []*Project{}
+
+	for rows.Next() {
+		p := &Project{}
+
+		err = rows.Scan(&p.ID, &p.Name, &p.Alias, &p.CreatedAt, &p.UpdatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		out = append(out, p)
+	}
+
+	return out, nil
+}
