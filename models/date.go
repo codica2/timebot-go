@@ -210,3 +210,36 @@ func endOfMonth(month, year int) int {
 		return m[month]
 	}
 }
+
+func ParseDate(s string) (*Date, error) {
+	r := regexp.MustCompile("(\\d?\\d)\\.(\\d?\\d)\\.?(\\d?\\d?\\d\\d)?")
+
+	matchData := r.FindStringSubmatch(s)
+
+	var day, month, year int64
+	var err error
+
+	day, err = strconv.ParseInt(matchData[1], 10, 64)
+	month, err = strconv.ParseInt(matchData[2], 10, 64)
+
+
+	if matchData[3] == "" {
+		year = int64(time.Now().Year())
+	} else {
+		year, err = strconv.ParseInt(matchData[3], 10, 64)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	if year < 100 {
+		year += 2000
+	}
+
+	t := time.Date(int(year), time.Month(month), int(day), 12, 0, 0, 0, time.Now().Location())
+
+	d := NewDate(t)
+
+	return &d, nil
+}
