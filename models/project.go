@@ -64,3 +64,30 @@ func GetAllProjects() ([]*Project, error) {
 
 	return out, nil
 }
+
+func (p *Project) Create() error {
+	transaction, err := DB.Begin()
+
+	if err != nil {
+		return err
+	}
+
+	now := time.Now()
+
+	p.CreatedAt = now
+	p.UpdatedAt = now
+
+	_, err = transaction.Exec("INSERT INTO projects (name, created_at, updated_at) VALUES ($1, $2, $3)", p.Name, p.CreatedAt, p.UpdatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	err = transaction.Commit()
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
