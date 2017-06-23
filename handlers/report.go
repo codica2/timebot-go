@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"github.com/nlopes/slack"
-	"regexp"
 	"fmt"
 	"github.com/alex-bogomolov/timebot_go/models"
 	"github.com/alex-bogomolov/timebot_go/sender"
+	"github.com/nlopes/slack"
+	"regexp"
 )
 
 const reportRegexpString = "^ *show (week|last week|month|last month)(?: (.*?))? *$"
@@ -26,7 +26,6 @@ func handleReport(message *slack.Msg) {
 	}
 
 	var project *models.Project
-
 
 	if len(projectName) != 0 {
 		project, err = models.FindProjectByNameOrAlias(projectName)
@@ -69,14 +68,24 @@ func handleReport(message *slack.Msg) {
 }
 
 func displayTimeEntries(timeEntries []*models.TimeEntry, from models.Date, to models.Date, user *models.User) {
-	stringArray := models.NewStringArray()
+	days := make(map[string][]*models.TimeEntry)
 
 	today := models.Today()
 
-	for d := from; to.CompareTo(&d) >= 0 && d.CompareTo(&today) <= 0; d = d.Plus(1) {
-		entries := findEntries(timeEntries, &d)
+	for _, timeEntry := range timeEntries {
+		if entries, ok := days[timeEntry.Date.String()]; ok {
+			days[timeEntry.Date.String()] = append(entries, timeEntry)
+		} else {
+			days[timeEntry.Date.String()] = []*models.TimeEntry{timeEntry}
+		}
+	}
 
-		line := fmt.Sprintf("`%s:", d.Format("02.01.06` (Mon)"))
+	stringArray := models.NewStringArray()
+
+	for d := from; to.CompareTo(&d) >= 0 && d.CompareTo(&today) <= 0; d = d.Plus(1) {
+		entries := days[d.String()]
+
+		line := fmt.Sprintf("`%s:", d.Format("02.01.06` (Monday)"))
 
 		if len(entries) == 0 {
 			line += " No entries"
@@ -92,18 +101,6 @@ func displayTimeEntries(timeEntries []*models.TimeEntry, from models.Date, to mo
 	stringArray.Add(fmt.Sprintf("*Total*: %s.", totalTime(timeEntries)))
 
 	sender.SendMessage(user.UID, stringArray.Join("\n"))
-}
-
-func findEntries(entries []*models.TimeEntry, d *models.Date) []*models.TimeEntry {
-	out := []*models.TimeEntry{}
-
-	for _, entry := range entries {
-		if entry.Date.Equal(d) {
-			out = append(out, entry)
-		}
-	}
-
-	return out
 }
 
 func totalTime(entries []*models.TimeEntry) string {

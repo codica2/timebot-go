@@ -1,12 +1,12 @@
 package handlers
 
 import (
+	"database/sql"
 	"github.com/alex-bogomolov/timebot_go/models"
 	"github.com/alex-bogomolov/timebot_go/sender"
-	"time"
 	"github.com/nlopes/slack"
 	"regexp"
-	"database/sql"
+	"time"
 )
 
 const newEntryStringRegexp = "^ *(.*) (\\d?\\d:[0-5]\\d) ([^\\s](?:.|\\s)*[^\\s])$"
