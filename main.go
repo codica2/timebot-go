@@ -63,7 +63,7 @@ func startBot(api *slack.Client, timebotId string) {
 		case *slack.ConnectedEvent:
 			fmt.Println("Connected to Slack")
 		case *slack.MessageEvent:
-			if event.Msg.User != timebotId && event.Msg.User != "U0L1X3Q4D" {
+			if event.Msg.User != timebotId && os.Getenv("GOLANG_ENV") == "development" && event.Msg.User != "U0L1X3Q4D" {
 				go sender.SendMessage(event.Msg.User, "Sorry, I am under maintenance now")
 			} else if event.Msg.User != timebotId {
 				go handlers.HandleMessage(&event.Msg)

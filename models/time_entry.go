@@ -91,6 +91,61 @@ func GetTimeEntriesInPeriodWithProjectAndUser(user *User, project *Project, from
 	return timeEntries, nil
 }
 
+func FindTimeEntryByID(id int) (*TimeEntry, error) {
+	selectPart := "time_entries.id, time_entries.user_id, time_entries.date, time_entries.time, time_entries.minutes, time_entries.details, time_entries.created_at, time_entries.updated_at, time_entries.project_id"
+	projectSelectPart := "projects.id, projects.name, projects.alias, projects.created_at, projects.updated_at"
+	joins := "INNER JOIN projects ON projects.id = time_entries.project_id"
+	sqlQuery := fmt.Sprintf("SELECT %s, %s FROM time_entries %s WHERE time_entries.id = $1", selectPart, projectSelectPart, joins)
+	rows, err := DB.Query(sqlQuery, id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if rows.Next() {
+		timeEntry := TimeEntry{}
+		timeEntry.Project = &Project{}
+
+		var d time.Time
+
+		err = rows.Scan(&timeEntry.ID, &timeEntry.UserId, &d, &timeEntry.Time, &timeEntry.Minutes,
+			&timeEntry.Details, &timeEntry.CreatedAt, &timeEntry.UpdatedAt, &timeEntry.ProjectId,
+			&timeEntry.Project.ID, &timeEntry.Project.Name, &timeEntry.Project.Alias, &timeEntry.Project.CreatedAt,
+			&timeEntry.Project.UpdatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		timeEntry.Date = NewDate(d)
+		return &timeEntry, nil;
+	} else {
+		return nil, NotFoundError{}
+	}
+}
+
 func (t TimeEntry) String() string {
 	return fmt.Sprintf("User ID: %d; Time: %s; Details: \"%s\"", t.ID, t.Time, t.Details.String)
+}
+
+func (t TimeEntry) Delete() error {
+	transaction, err := DB.Begin()
+
+	if err != nil {
+		return err
+	}
+
+	_, err = transaction.Exec("DELETE FROM time_entries WHERE id = $1", t.ID)
+
+	if err != nil {
+		return err
+	}
+
+	err = transaction.Commit()
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

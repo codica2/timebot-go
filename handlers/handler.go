@@ -23,6 +23,8 @@ func HandleMessage(message *slack.Msg) {
 		handleAddProject(message.User, message.Text)
 	} else if matched, err = regexp.MatchString(showHelpRegexp, strings.ToLower(message.Text)); matched && err == nil {
 		handleShowHelp(message.User)
+	} else if matched, err = regexp.MatchString(removeEntryRegexp, strings.ToLower(message.Text)); matched && err == nil {
+		handleRemoveEntry(message.User, message.Text)
 	} else {
 		sender.SendMessage(message.User, "Sorry. I don't understand you.")
 	}

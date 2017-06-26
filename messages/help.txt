@@ -12,7 +12,7 @@
 > For example, `edit 1 Timebot 8:00 a nice comment`. *(NOT IMPLEMENTED)*
 
 > To remove a time entry, write `remove entry ID`.
-> For example, `remove entry 1`. *(NOT IMPLEMENTED)*
+> For example, `remove entry 1`.
 
 > To add new project, write `add project PROJECT_NAME`.
 > For example, `add project Timebot`.
