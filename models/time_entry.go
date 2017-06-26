@@ -66,6 +66,8 @@ func GetTimeEntriesInPeriodWithProjectAndUser(user *User, project *Project, from
 		return nil, err
 	}
 
+	defer rows.Close()
+
 	timeEntries := []*TimeEntry{}
 
 	for rows.Next() {
@@ -101,6 +103,8 @@ func FindTimeEntryByID(id int) (*TimeEntry, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	defer rows.Close()
 
 	if rows.Next() {
 		timeEntry := TimeEntry{}

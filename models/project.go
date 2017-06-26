@@ -24,6 +24,8 @@ func FindProjectByNameOrAlias(name string) (*Project, error) {
 		return nil, err
 	}
 
+	defer rows.Close()
+
 	project := Project{}
 
 	if rows.Next() {
@@ -47,6 +49,8 @@ func GetAllProjects() ([]*Project, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	defer rows.Close()
 
 	out := []*Project{}
 

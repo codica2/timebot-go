@@ -24,6 +24,8 @@ func FindUser(uid string) (*User, error) {
 		return nil, err
 	}
 
+	defer rows.Close()
+
 	user := User{}
 
 	if rows.Next() {
