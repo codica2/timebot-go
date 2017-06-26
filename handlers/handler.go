@@ -6,6 +6,7 @@ import (
 	"github.com/nlopes/slack"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 func HandleMessage(message *slack.Msg) {
@@ -20,6 +21,8 @@ func HandleMessage(message *slack.Msg) {
 		handleShowProjects(message.User)
 	} else if matched, err = regexp.MatchString(addProjectRegexp, message.Text); matched && err == nil {
 		handleAddProject(message.User, message.Text)
+	} else if matched, err = regexp.MatchString(showHelpRegexp, strings.ToLower(message.Text)); matched && err == nil {
+		handleShowHelp(message.User)
 	} else {
 		sender.SendMessage(message.User, "Sorry. I don't understand you.")
 	}
