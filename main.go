@@ -9,7 +9,11 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/nlopes/slack"
 	"os"
+	"runtime"
 )
+
+var publicChannelsMap map[string]bool
+var timebotId string
 
 func main() {
 	slackToken := os.Getenv("SLACK_TOKEN")
@@ -17,7 +21,9 @@ func main() {
 	api := slack.New(slackToken)
 	sender.Api = api
 
-	timebotId, err := getTimebotId(api)
+	var err error
+
+	timebotId, err = getTimebotId(api)
 
 	if err != nil {
 		fmt.Println(err)
@@ -31,7 +37,20 @@ func main() {
 		return
 	}
 
-	startBot(api, timebotId)
+	publicChannels, err := api.GetChannels(true)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	publicChannelsMap = make(map[string]bool)
+
+	for _, channel := range publicChannels {
+		publicChannelsMap[channel.ID] = true
+	}
+
+	startBot(api)
 }
 
 func getTimebotId(api *slack.Client) (string, error) {
@@ -40,8 +59,6 @@ func getTimebotId(api *slack.Client) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	var timebotId string
 
 	for _, user := range users {
 		if user.Name == "timebot" {
@@ -53,26 +70,50 @@ func getTimebotId(api *slack.Client) (string, error) {
 	return timebotId, nil
 }
 
-func startBot(api *slack.Client, timebotId string) {
+func startBot(api *slack.Client) {
 	rtm := api.NewRTM()
 
 	go rtm.ManageConnection()
+
+	semaphore := make(chan int, runtime.NumCPU())
 
 	for msg := range rtm.IncomingEvents {
 		switch event := msg.Data.(type) {
 		case *slack.ConnectedEvent:
 			fmt.Println("Connected to Slack")
 		case *slack.MessageEvent:
-			if event.Msg.User != timebotId && os.Getenv("GOLANG_ENV") == "development" && event.Msg.User != "U0L1X3Q4D" {
-				go sender.SendMessage(event.Msg.User, "Sorry, I am under maintenance now")
-			} else if event.Msg.User != timebotId {
-				go handlers.HandleMessage(&event.Msg)
+			if messageIsProcessable(&event.Msg) && underDevelopment(&event.Msg) {
+				semaphore <- 1
+				go (func() {
+					sender.SendMessage(event.Msg.User, "Sorry, I am under maintenance now")
+					<- semaphore
+				})()
+			} else if messageIsProcessable(&event.Msg) {
+				semaphore <- 1
+				go (func() {
+					handlers.HandleMessage(&event.Msg)
+					<- semaphore
+				})()
 			}
 		}
 	}
 }
 
-// "user=postgres password=postgres database=timebot_development sslmode=disable"
+func messageIsProcessable(msg *slack.Msg) bool {
+	return msg.User != timebotId && messageIsNotFromPublicChannel(msg.Channel)
+}
+
+func messageIsNotFromPublicChannel(channelId string) bool {
+	if _, ok := publicChannelsMap[channelId]; ok {
+		return false
+	} else {
+		return true
+	}
+}
+
+func underDevelopment(msg *slack.Msg) bool {
+	return os.Getenv("GOLANG_ENV") == "development" && msg.User != "U0L1X3Q4D"
+}
 
 func connectToDatabase() (*sql.DB, error) {
 	db, dbError := sql.Open("postgres", os.Getenv("TIMEBOT_GO_DB_CONNECTION_STRING"))
