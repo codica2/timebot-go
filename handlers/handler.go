@@ -13,7 +13,7 @@ func HandleMessage(message *slack.Msg) {
 	defer (func() {
 		if r := recover(); r != nil {
 			sender.SendMessage(message.User, fmt.Sprint(r))
-			fmt.Printf("PANIC: %s; %v", message.Text, r)
+			fmt.Printf("PANIC: %q; %v\n", message.Text, r)
 		}
 	})()
 

@@ -127,5 +127,5 @@ func connectToDatabase() (*sql.DB, error) {
 func logMessage(msg *slack.Msg) {
 	location, _ := time.LoadLocation("Europe/Kiev")
 	t := time.Now().In(location).Format("02.01.06 15:04:05")
-	fmt.Printf("%s - %s - %s\n", t, usersMap[msg.User], msg.Text)
+	fmt.Printf("%s - %s - %q\n", t, usersMap[msg.User], msg.Text)
 }
