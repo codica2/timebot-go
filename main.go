@@ -10,12 +10,15 @@ import (
 	"github.com/nlopes/slack"
 	"os"
 	"runtime"
+	"time"
 )
 
 var publicChannelsMap map[string]bool
 var timebotId string
+var usersMap map[string]string
 
 func main() {
+	fmt.Printf("Number of logical processors: %d\n", runtime.GOMAXPROCS(0))
 	slackToken := os.Getenv("SLACK_TOKEN")
 
 	api := slack.New(slackToken)
@@ -23,7 +26,7 @@ func main() {
 
 	var err error
 
-	timebotId, err = getTimebotId(api)
+	timebotId, usersMap, err = getUsers(api)
 
 	if err != nil {
 		fmt.Println(err)
@@ -53,21 +56,24 @@ func main() {
 	startBot(api)
 }
 
-func getTimebotId(api *slack.Client) (string, error) {
+func getUsers(api *slack.Client) (string, map[string]string, error) {
 	users, err := api.GetUsers()
 
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
+	usersMap := make(map[string]string)
+	timebotId := ""
+
 	for _, user := range users {
+		usersMap[user.ID] = user.Name
 		if user.Name == "timebot" {
 			timebotId = user.ID
-			break
 		}
 	}
 
-	return timebotId, nil
+	return timebotId, usersMap, nil
 }
 
 func startBot(api *slack.Client) {
@@ -75,24 +81,17 @@ func startBot(api *slack.Client) {
 
 	go rtm.ManageConnection()
 
-	semaphore := make(chan int, runtime.NumCPU())
-
 	for msg := range rtm.IncomingEvents {
 		switch event := msg.Data.(type) {
 		case *slack.ConnectedEvent:
 			fmt.Println("Connected to Slack")
 		case *slack.MessageEvent:
 			if messageIsProcessable(&event.Msg) && underDevelopment(&event.Msg) {
-				semaphore <- 1
-				go (func() {
-					sender.SendMessage(event.Msg.User, "Sorry, I am under maintenance now")
-					<- semaphore
-				})()
+				go sender.SendMessage(event.Msg.User, "Sorry, I am under maintenance now")
 			} else if messageIsProcessable(&event.Msg) {
-				semaphore <- 1
 				go (func() {
+					logMessage(&event.Msg)
 					handlers.HandleMessage(&event.Msg)
-					<- semaphore
 				})()
 			}
 		}
@@ -123,4 +122,10 @@ func connectToDatabase() (*sql.DB, error) {
 	} else {
 		return db, nil
 	}
+}
+
+func logMessage(msg *slack.Msg) {
+	location, _ := time.LoadLocation("Europe/Kiev")
+	t := time.Now().In(location).Format("02.01.06 15:04:05")
+	fmt.Printf("%s - %s - %s\n", t, usersMap[msg.User], msg.Text)
 }
