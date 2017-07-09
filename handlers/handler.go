@@ -7,13 +7,20 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"os"
 )
 
 func HandleMessage(message *slack.Msg) {
 	defer (func() {
 		if r := recover(); r != nil {
 			sender.SendMessage(message.User, fmt.Sprint(r))
-			fmt.Printf("PANIC: %q; %v\n", message.Text, r)
+			text := fmt.Sprintf("PANIC: %q; %v\n", message.Text, r)
+			f, err := os.OpenFile("logs/error.log", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+			if err != nil {
+				fmt.Println(err)
+			}
+			f.Write([]byte(text))
+			f.Close()
 		}
 	})()
 

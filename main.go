@@ -56,6 +56,15 @@ func main() {
 	startBot(api)
 }
 
+func init () {
+	if _, err := os.Stat("logs"); os.IsNotExist(err) {
+		os.Mkdir("logs", 0700)
+	}
+	if _, err := os.Stat("messages/help.txt"); err != nil {
+		panic(err)
+	}
+}
+
 func getUsers(api *slack.Client) (string, map[string]string, error) {
 	users, err := api.GetUsers()
 
@@ -126,6 +135,18 @@ func connectToDatabase() (*sql.DB, error) {
 
 func logMessage(msg *slack.Msg) {
 	location, _ := time.LoadLocation("Europe/Kiev")
-	t := time.Now().In(location).Format("02.01.06 15:04:05")
-	fmt.Printf("%s - %s - %q\n", t, usersMap[msg.User], msg.Text)
+	t := time.Now().In(location)
+
+	filename := t.Format("bot-2006-01-02.log")
+
+	f, err := os.OpenFile("logs/" + filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	defer f.Close()
+
+	f.Write([]byte(fmt.Sprintf("%s - %s - %q\n", t.Format("02.01.06 15:04:05"), usersMap[msg.User], msg.Text)))
 }
