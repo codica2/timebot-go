@@ -9,7 +9,7 @@ If developer doesn't reply, the bot reminds him about the question. The develope
  - PostgreSQL
 
 ## License
-timebot-go is Copyright © 2015-2018 Codica. It is released under the [MIT License](https://opensource.org/licenses/MIT).
+timebot-go is Copyright © 2015-2019 Codica. It is released under the [MIT License](https://opensource.org/licenses/MIT).
 
 ## About Codica
 
